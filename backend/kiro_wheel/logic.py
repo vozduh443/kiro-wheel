@@ -364,7 +364,14 @@ async def _fulfil(
             reward=Reward(kind="days", amount=int(p["days"])),
         )
         return {"applied": True, "text": f"К подписке добавлено {p['days']} дн."}
-    if kind == "traffic":
+        if kind == "traffic":
+        # Проверяем безлимитную подписку — не добавляем трафик чтобы не сломать подписку
+        is_unlimited = await session.scalar(
+            text("SELECT regular_unlimited_override FROM subscriptions WHERE user_id = :u AND is_active = true LIMIT 1"),
+            {"u": user_id}
+        )
+        if is_unlimited:
+            return {"applied": True, "text": f"У вас безлимитный тариф — трафик добавлен автоматически ✓"}
         await grant(
             session,
             owner=PLUGIN_ID,
